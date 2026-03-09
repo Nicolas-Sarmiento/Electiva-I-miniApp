@@ -14,19 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "MiniApp Firebase",
-  description: "Una mini aplicación con React, Next.js y Firebase",
+  title: "Foro Académico de Nim",
+  description: "Foro para discutir sobre los temas académicos",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-zinc-50 dark:bg-black text-black dark:text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300`}
       >
         <AuthProvider>
           <Navbar />
-          <main className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+          <main className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 pt-20">
             {children}
           </main>
         </AuthProvider>

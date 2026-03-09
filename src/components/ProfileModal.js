@@ -98,7 +98,7 @@ export default function ProfileModal({ isOpen, onClose, cloudName, uploadPreset,
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-black dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full p-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               placeholder="Tu nombre..."
               maxLength={30}
             />

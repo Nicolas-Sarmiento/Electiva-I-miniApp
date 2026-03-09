@@ -208,7 +208,7 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
             </div>
           )}
           <div>
-            <h3 className="font-semibold text-black dark:text-white leading-tight">
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
               {post.autorNombre}
             </h3>
             <p className="text-xs text-zinc-500">{formattedDate}</p>
@@ -257,7 +257,7 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
           <textarea
             value={editedContent}
             onChange={(e) => setEditedContent(e.target.value)}
-            className="w-full p-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-black dark:text-white mb-2"
+            className="w-full p-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800/80 text-zinc-900 dark:text-zinc-100 mb-2 focus:ring-2 focus:ring-blue-500/50 outline-none"
             rows="3"
           />
           {error && <p className="text-red-500 text-sm mb-2">{error}</p>}

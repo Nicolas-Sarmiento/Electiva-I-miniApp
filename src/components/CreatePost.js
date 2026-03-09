@@ -118,7 +118,7 @@ export default function CreatePost({ onPostCreated, cloudName, uploadPreset }) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="¿Qué quieres compartir en el Foro Académico uwu?"
-              className="w-full bg-transparent border-none resize-none focus:ring-0 text-black dark:text-white placeholder-zinc-500 min-h-[80px]"
+              className="w-full bg-transparent border-none resize-none focus:ring-0 text-zinc-900 dark:text-zinc-100 placeholder-zinc-500 min-h-[80px]"
             />
           </div>
         </div>
