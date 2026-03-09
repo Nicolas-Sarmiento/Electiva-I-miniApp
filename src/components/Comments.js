@@ -69,6 +69,7 @@ export default function Comments({ postId, postAuthorId }) {
     try {
       await deleteComment(postId, commentId);
       setComments(comments.filter(c => c.id !== commentId));
+      closeModal();
     } catch (err) {
       console.error(err);
       showAlert("Error", "No fue posible eliminar el comentario. Revisa los permisos.");
@@ -111,7 +112,7 @@ export default function Comments({ postId, postAuthorId }) {
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
           
           {/* Comments List */}
-          <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-4 max-h-60 overflow-y-auto pr-4 pt-4 pb-2 custom-scrollbar">
             {comments.length === 0 ? (
               <p className="text-sm text-zinc-500 text-center py-2">No hay comentarios aún. ¡Sé el primero!</p>
             ) : (
