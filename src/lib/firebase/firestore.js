@@ -110,3 +110,54 @@ export const updateAllUserPosts = async (userId, newName, newPhoto) => {
     throw error;
   }
 };
+
+// --- COMMENTS SYSTEM ---
+
+export const addComment = async (postId, commentData) => {
+  try {
+    const commentsRef = collection(db, "posts", postId, "comments");
+    const docRef = await addDoc(commentsRef, {
+      ...commentData,
+      fecha: serverTimestamp(),
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding comment: ", error);
+    throw error;
+  }
+};
+
+export const updateComment = async (postId, commentId, newContent) => {
+  try {
+    const commentRef = doc(db, "posts", postId, "comments", commentId);
+    await updateDoc(commentRef, { contenido: newContent });
+  } catch (error) {
+    console.error("Error updating comment: ", error);
+    throw error;
+  }
+};
+
+export const getPostComments = async (postId) => {
+  try {
+    const commentsRef = collection(db, "posts", postId, "comments");
+    const q = query(commentsRef, orderBy("fecha", "asc"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Error getting comments: ", error);
+    throw error;
+  }
+};
+
+export const deleteComment = async (postId, commentId) => {
+  try {
+    const commentRef = doc(db, "posts", postId, "comments", commentId);
+    await deleteDoc(commentRef);
+  } catch (error) {
+    console.error("Error deleting comment: ", error);
+    throw error;
+  }
+};

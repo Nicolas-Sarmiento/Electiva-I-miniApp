@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase/config";
 import { toggleLike, getPostLikes } from "@/lib/firebase/firestore";
 import { uploadMultipleImages } from "@/lib/cloudinary";
 import Modal from "./Modal";
+import Comments from "./Comments";
 
 export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, uploadPreset }) {
   const { user } = useAuth();
@@ -398,6 +399,9 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
             </span>
           </button>
       </div>
+
+      {/* COMMENTS */}
+      <Comments postId={post.id} postAuthorId={post.userId} />
 
       {/* MODAL */}
       <Modal
