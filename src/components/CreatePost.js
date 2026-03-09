@@ -17,19 +17,30 @@ export default function CreatePost({ onPostCreated, cloudName, uploadPreset }) {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
+    const availableSlots = 4 - images.length;
     
-    // Optional: Limit number of files
-    if (files.length > 4) {
-      setError("Solo puedes subir un máximo de 4 imágenes por post.");
+    if (availableSlots <= 0) {
+      setError("Ya has alcanzado el límite de 4 fotos por post.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    setImages(files);
-    setError("");
+    let filesToAdd = files;
 
-    // Create previews to show instantly in UI
-    const previews = files.map(file => URL.createObjectURL(file));
-    setImagePreviews(previews);
+    if (files.length > availableSlots) {
+      setError(`Aviso: Límite de 4 fotos por post. Solo se añadieron ${availableSlots} foto(s) de las seleccionadas.`);
+      filesToAdd = files.slice(0, availableSlots);
+    } else {
+      setError("");
+    }
+
+    if (filesToAdd.length > 0) {
+      setImages([...images, ...filesToAdd]);
+      const previews = filesToAdd.map(file => URL.createObjectURL(file));
+      setImagePreviews([...imagePreviews, ...previews]);
+    }
+    
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeImage = (indexToRemove) => {

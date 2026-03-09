@@ -61,6 +61,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const editUserProfile = async (newName, newPhotoFile, cloudName, uploadPreset) => {
+    try {
+      if (!user) throw new Error("No hay usuario autenticado.");
+      
+      let photoURL = user.photoURL;
+
+      // Si subieron una nueva foto, súbela a Cloudinary primero
+      if (newPhotoFile) {
+        if (!cloudName || !uploadPreset) {
+          throw new Error("Cloudinary no está configurado.");
+        }
+        // Importación dinámica para evitar dependencias circulares / problemas de servidor
+        const { uploadImageToCloudinary } = await import("@/lib/cloudinary");
+        photoURL = await uploadImageToCloudinary(newPhotoFile, cloudName, uploadPreset);
+      }
+
+      // Actualizar perfil en Firebase Auth
+      await updateProfile(user, {
+        displayName: newName || user.displayName,
+        photoURL: photoURL
+      });
+
+      // Forzar recarga del estado local del usuario para reflejar cambios
+      setUser({ ...user });
+      
+      return photoURL; // Útil para actualizar posts antiguos luego
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -76,6 +108,7 @@ export const AuthProvider = ({ children }) => {
       loginWithGoogle,
       loginWithEmail, 
       registerWithEmail, 
+      editUserProfile,
       logout, 
       loading 
     }}>

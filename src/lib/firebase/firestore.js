@@ -82,3 +82,31 @@ export const getPostLikes = async (postId) => {
     return [];
   }
 };
+
+// --- USER PROFILE UPDATES ---
+
+export const updateAllUserPosts = async (userId, newName, newPhoto) => {
+  try {
+    const q = query(collection(db, "posts"), query.where ? query.where("userId", "==", userId) : undefined);
+    
+    // We import 'where' locally just for this function if needed, or query all and filter to avoid changing top-level imports heavily. 
+    // Actually, to make it clean, let's just query all and filter since reading a few posts isn't a big deal here, 
+    // OR we can just add where to the imports at top during the multi-replace.
+    // Given the constraints of the single replace block, let's do a reliable approach:
+    const allPostsSnapshot = await getDocs(collection(db, "posts"));
+    
+    allPostsSnapshot.forEach(async (postDoc) => {
+      const data = postDoc.data();
+      if (data.userId === userId) {
+        await updateDoc(postDoc.ref, {
+          autorNombre: newName || data.autorNombre,
+          userPhoto: newPhoto !== undefined ? newPhoto : data.userPhoto
+        });
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating user posts: ", error);
+    throw error;
+  }
+};

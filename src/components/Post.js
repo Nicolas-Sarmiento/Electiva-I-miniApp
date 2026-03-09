@@ -4,6 +4,7 @@ import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { toggleLike, getPostLikes } from "@/lib/firebase/firestore";
 import { uploadMultipleImages } from "@/lib/cloudinary";
+import Modal from "./Modal";
 
 export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, uploadPreset }) {
   const { user } = useAuth();
@@ -16,9 +17,37 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
   
+  // MODAL
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: "", message: "", type: "alert", onConfirm: null });
+  const closeModal = () => setModalConfig({ ...modalConfig, isOpen: false });
+  const showAlert = (title, message) => setModalConfig({ isOpen: true, title, message, type: "alert", onConfirm: null });
+  const showConfirm = (title, message, onConfirm) => setModalConfig({ isOpen: true, title, message, type: "confirm", onConfirm });
+  
   // LIKES
   const [likes, setLikes] = useState([]);
   const [isLiked, setIsLiked] = useState(false);
+  
+  // CAROUSEL
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Reset carousel index if images change
+  useEffect(() => {
+    if (post.imagenes && currentImageIndex >= post.imagenes.length) {
+      setCurrentImageIndex(Math.max(0, post.imagenes.length - 1));
+    }
+  }, [post.imagenes, currentImageIndex]);
+
+  const handleNextImage = () => {
+    if (post.imagenes && currentImageIndex < post.imagenes.length - 1) {
+      setCurrentImageIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(prev => prev - 1);
+    }
+  };
 
   const isOwner = user?.uid === post.userId;
 
@@ -33,16 +62,18 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
     fetchLikes();
   }, [post.id, user]);
 
-  const handleDelete = async () => {
-    if (confirm("¿Estás seguro de que quieres eliminar este post?")) {
-      try {
-        await deleteDoc(doc(db, "posts", post.id));
-        if (onPostDeleted) onPostDeleted();
-      } catch (error) {
-        console.error("Error al eliminar:", error);
-        alert("Error al eliminar el post. Puede ser un problema de permisos en Firebase. Revisa las reglas de Firestore.");
-      }
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteDoc(doc(db, "posts", post.id));
+      if (onPostDeleted) onPostDeleted();
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+      showAlert("Atención", "No fue posible eliminar la publicación en este momento. Inténtalo más tarde.");
     }
+  };
+
+  const handleDelete = () => {
+    showConfirm("Eliminar Publicación", "Esta acción no se puede deshacer. ¿Deseas eliminar esta publicación permanentemente?", handleDeleteConfirm);
   };
   const handleToggleEdit = () => {
     if (isEditing) {
@@ -58,14 +89,24 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    if (existingImages.length + newImages.length + files.length > 4) {
-      setError("Solo puedes tener un máximo de 4 imágenes por post.");
-      return;
+    const currentTotal = existingImages.length + newImages.length;
+    const availableSlots = 4 - currentTotal;
+    
+    let filesToAdd = files;
+
+    if (files.length > availableSlots) {
+      setError(`Aviso: Límite de 4 fotos por post. Solo se ${availableSlots === 1 ? 'añadió' : 'añadieron'} ${Math.max(0, availableSlots)} foto(s) de las seleccionadas.`);
+      filesToAdd = files.slice(0, Math.max(0, availableSlots));
+    } else {
+      setError("");
     }
-    setNewImages([...newImages, ...files]);
-    setError("");
-    const previews = files.map(file => URL.createObjectURL(file));
-    setImagePreviews([...imagePreviews, ...previews]);
+
+    if (filesToAdd.length > 0) {
+      setNewImages([...newImages, ...filesToAdd]);
+      const previews = filesToAdd.map(file => URL.createObjectURL(file));
+      setImagePreviews([...imagePreviews, ...previews]);
+    }
+    
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -111,14 +152,14 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
       if (onPostUpdated) onPostUpdated();
     } catch (error) {
       console.error("Error al actualizar:", error);
-      setError("Error al actualizar el post. Puede ser un problema de permisos.");
+      setError("No fue posible guardar los cambios. Inténtalo de nuevo.");
     } finally {
       setIsSubmitting(false);
     }
   };
   const handleLike = async () => {
     if (!user) {
-      alert("Debes iniciar sesión para dar me gusta.");
+      showAlert("Atención", "Debes iniciar sesión para dar me gusta.");
       return;
     }
     
@@ -191,19 +232,19 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
               </button>
             </>
           ) : (
-            // User requested to see Edit and Delete buttons on all posts for practice
+            // Disabled state options instead of hiding them completely
             <>
               <button 
-                 onClick={() => alert("Práctica: Solo el dueño puede editar este post, pero el botón está aquí como pediste.")}
+                 onClick={() => showAlert("Acceso restringido", "Solo el autor original puede modificar esta publicación.")}
                  className="text-sm px-3 py-1 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition"
               >
-                 Editar (Práctica)
+                 Editar
               </button>
               <button 
-                onClick={() => alert("Práctica: Solo el dueño puede eliminar este post, pero el botón está aquí como pediste.")}
+                onClick={() => showAlert("Acceso restringido", "Solo el autor original puede eliminar esta publicación.")}
                 className="text-sm px-3 py-1 text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
               >
-                Eliminar (Práctica)
+                Eliminar
               </button>
             </>
           )}
@@ -293,12 +334,53 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
 
       {/* Render Images if exist */}
       {post.imagenes && post.imagenes.length > 0 && (
-        <div className={`mt-4 grid gap-2 ${post.imagenes.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-          {post.imagenes.map((imgUrl, index) => (
-             <div key={index} className="rounded-xl overflow-hidden bg-black/5 aspect-video border border-zinc-100 dark:border-zinc-800">
-               <img src={imgUrl} alt="Post Attachment" className="w-full h-full object-cover" loading="lazy" />
-             </div>
-          ))}
+        <div className="mt-4 relative rounded-xl overflow-hidden bg-black/5 aspect-video border border-zinc-100 dark:border-zinc-800 group">
+          <img 
+            src={post.imagenes[currentImageIndex] || post.imagenes[0]} 
+            alt={`Post Attachment ${currentImageIndex + 1}`} 
+            className="w-full h-full object-cover transition-opacity duration-300" 
+            loading="lazy" 
+          />
+          
+          {/* Navigation Arrows */}
+          {post.imagenes.length > 1 && (
+            <>
+              {currentImageIndex > 0 && (
+                <button 
+                  onClick={handlePrevImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                  aria-label="Imagen anterior"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              {currentImageIndex < post.imagenes.length - 1 && (
+                <button 
+                  onClick={handleNextImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                  aria-label="Siguiente imagen"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+              
+              {/* Dots Indicators */}
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                {post.imagenes.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`w-2 h-2 rounded-full transition-all ${currentImageIndex === idx ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'}`}
+                    aria-label={`Ir a la imagen ${idx + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
       
@@ -316,6 +398,17 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
             </span>
           </button>
       </div>
+
+      {/* MODAL */}
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={closeModal}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        onConfirm={modalConfig.onConfirm}
+        confirmText={modalConfig.type === "confirm" ? "Eliminar" : "Entendido"}
+      />
     </div>
   );
 }
