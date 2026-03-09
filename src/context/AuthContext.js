@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { 
   onAuthStateChanged, 
-  signInWithPopup, 
+  signInWithPopup,
   GoogleAuthProvider, 
   signOut,
   createUserWithEmailAndPassword,
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{ 
       user, 
-      loginWithGoogle, 
+      loginWithGoogle,
       loginWithEmail, 
       registerWithEmail, 
       logout, 
