@@ -31,6 +31,9 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
   // CAROUSEL
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // FULLSCREEN IMAGE
+  const [fullscreenImage, setFullscreenImage] = useState(null);
+
   // Reset carousel index if images change
   useEffect(() => {
     if (post.imagenes && currentImageIndex >= post.imagenes.length) {
@@ -340,8 +343,9 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
           <img 
             src={post.imagenes[currentImageIndex] || post.imagenes[0]} 
             alt={`Post Attachment ${currentImageIndex + 1}`} 
-            className="w-full h-full object-cover transition-opacity duration-300" 
+            className="w-full h-full object-cover transition-opacity duration-300 cursor-pointer hover:opacity-90" 
             loading="lazy" 
+            onClick={() => setFullscreenImage(post.imagenes[currentImageIndex] || post.imagenes[0])}
           />
           
           {/* Navigation Arrows */}
@@ -414,6 +418,32 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
         onConfirm={modalConfig.onConfirm}
         confirmText={modalConfig.type === "confirm" ? "Eliminar" : "Entendido"}
       />
+
+      {/* FULLSCREEN IMAGE OVERLAY */}
+      {fullscreenImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-200 cursor-zoom-out"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 text-white hover:text-zinc-300 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors z-[101]"
+            onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
+            aria-label="Cerrar vista completa"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <div className="relative max-w-[95vw] max-h-[95vh] w-full h-full flex items-center justify-center p-4">
+            <img 
+              src={fullscreenImage} 
+              alt="Fullscreen view" 
+              className="max-w-full max-h-full object-contain cursor-default rounded-md shadow-2xl" 
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

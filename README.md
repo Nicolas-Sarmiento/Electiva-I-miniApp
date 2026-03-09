@@ -97,3 +97,7 @@ npm start
 - Creación ágil de publicaciones (Soporte CRUD: Crear, Leer, Actualizar, Borrar).
 - Zona de comentarios anidada dentro de cada Publicación.
 - Soporte Multi-Tema moderno y responsivo para Light y Dark modes.
+
+## Despleado en:
+
+https://electiva-i-mini-app.vercel.app/
