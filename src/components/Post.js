@@ -1,13 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { toggleLike, getPostLikes } from "@/lib/firebase/firestore";
+import { uploadMultipleImages } from "@/lib/cloudinary";
 
-export default function Post({ post, onPostDeleted, onPostUpdated }) {
+export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, uploadPreset }) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(post.contenido);
+  const [existingImages, setExistingImages] = useState(post.imagenes || []);
+  const [newImages, setNewImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
   
   // LIKES
   const [likes, setLikes] = useState([]);
@@ -37,19 +44,78 @@ export default function Post({ post, onPostDeleted, onPostUpdated }) {
       }
     }
   };
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      // Cancelar edición: restaurar estados originales
+      setEditedContent(post.contenido);
+      setExistingImages(post.imagenes || []);
+      setNewImages([]);
+      setImagePreviews([]);
+      setError("");
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (existingImages.length + newImages.length + files.length > 4) {
+      setError("Solo puedes tener un máximo de 4 imágenes por post.");
+      return;
+    }
+    setNewImages([...newImages, ...files]);
+    setError("");
+    const previews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews([...imagePreviews, ...previews]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeExistingImage = (indexToRemove) => {
+    setExistingImages(existingImages.filter((_, index) => index !== indexToRemove));
+  };
+
+  const removeNewImage = (indexToRemove) => {
+    setNewImages(newImages.filter((_, index) => index !== indexToRemove));
+    setImagePreviews(imagePreviews.filter((_, index) => index !== indexToRemove));
+  };
 
   const handleUpdate = async () => {
-    if (!editedContent.trim()) return;
+    if (!editedContent.trim() && existingImages.length === 0 && newImages.length === 0) {
+      setError("El post no puede estar vacío");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError("");
+
     try {
-      await updateDoc(doc(db, "posts", post.id), { contenido: editedContent });
+      let finalImages = [...existingImages];
+
+      if (newImages.length > 0) {
+        if (!cloudName || !uploadPreset) {
+          setError("Cloudinary no está configurado.");
+          setIsSubmitting(false);
+          return;
+        }
+        const uploadedUrls = await uploadMultipleImages(newImages, cloudName, uploadPreset);
+        finalImages = [...finalImages, ...uploadedUrls];
+      }
+
+      await updateDoc(doc(db, "posts", post.id), { 
+        contenido: editedContent,
+        imagenes: finalImages
+      });
+      
       setIsEditing(false);
+      setNewImages([]);
+      setImagePreviews([]);
       if (onPostUpdated) onPostUpdated();
     } catch (error) {
       console.error("Error al actualizar:", error);
-      alert("Error al actualizar el post. Puede ser un problema de permisos.");
+      setError("Error al actualizar el post. Puede ser un problema de permisos.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
   const handleLike = async () => {
     if (!user) {
       alert("Debes iniciar sesión para dar me gusta.");
@@ -112,7 +178,7 @@ export default function Post({ post, onPostDeleted, onPostUpdated }) {
           {isOwner ? (
             <>
               <button 
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={handleToggleEdit}
                 className="text-sm px-3 py-1 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition"
               >
                  {isEditing ? "Cancelar" : "Editar"}
@@ -152,12 +218,72 @@ export default function Post({ post, onPostDeleted, onPostUpdated }) {
             className="w-full p-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-black dark:text-white mb-2"
             rows="3"
           />
-          <button 
-            onClick={handleUpdate}
-             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition"
-          >
-            Guardar Cambios
-          </button>
+          {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+
+          {(existingImages.length > 0 || imagePreviews.length > 0) && (
+            <div className={`mb-3 grid gap-2 ${(existingImages.length + imagePreviews.length) === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {existingImages.map((imgUrl, index) => (
+                 <div key={`existing-${index}`} className="relative group rounded-xl overflow-hidden aspect-video bg-black/5 border border-zinc-200 dark:border-zinc-800">
+                   <img src={imgUrl} alt="Existing" className="w-full h-full object-cover" />
+                   <button 
+                    type="button"
+                    onClick={() => removeExistingImage(index)}
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                   >
+                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                   </button>
+                 </div>
+              ))}
+              {imagePreviews.map((preview, index) => (
+                 <div key={`new-${index}`} className="relative group rounded-xl overflow-hidden aspect-video bg-black/5 border border-zinc-200 dark:border-zinc-800">
+                   <img src={preview} alt={`preview ${index}`} className="w-full h-full object-cover" />
+                   <button 
+                    type="button"
+                    onClick={() => removeNewImage(index)}
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                   >
+                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                   </button>
+                 </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-2">
+            <div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                multiple
+                accept="image/*"
+                className="hidden"
+                id={`edit-image-upload-${post.id}`}
+              />
+              <label 
+                htmlFor={`edit-image-upload-${post.id}`}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-full cursor-pointer transition-colors"
+                title="Añadir fotos"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="hidden sm:inline">Fotos</span>
+              </label>
+            </div>
+            
+            <button 
+              onClick={handleUpdate}
+              disabled={isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition"
+            >
+              {isSubmitting ? "Guardando..." : "Guardar Cambios"}
+            </button>
+          </div>
         </div>
       ) : (
         <p className="text-zinc-800 dark:text-zinc-200 mt-2 whitespace-pre-wrap">

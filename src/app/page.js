@@ -60,7 +60,9 @@ export default function Home() {
               key={post.id} 
               post={post} 
               onPostDeleted={loadPosts} 
-              onPostUpdated={loadPosts} 
+              onPostUpdated={loadPosts}
+              cloudName={cloudName}
+              uploadPreset={uploadPreset}
             />
           ))
         ) : (
