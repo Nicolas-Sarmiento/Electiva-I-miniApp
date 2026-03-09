@@ -67,6 +67,7 @@ export default function Post({ post, onPostDeleted, onPostUpdated, cloudName, up
     try {
       await deleteDoc(doc(db, "posts", post.id));
       if (onPostDeleted) onPostDeleted();
+      closeModal();
     } catch (error) {
       console.error("Error al eliminar:", error);
       showAlert("Atención", "No fue posible eliminar la publicación en este momento. Inténtalo más tarde.");
